@@ -1,10 +1,10 @@
 var mysql = require("mysql");
 
 var pool = mysql.createPool({
-  host: "localhost",
+  host: "127.123.123.123",
   user: "root",
   password: "",
-  database: "infoeducatie",
+  database: "infoeducatie-2024",
 });
 
 pool.getConnection((err, connection) => {
