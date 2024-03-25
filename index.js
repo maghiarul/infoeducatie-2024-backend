@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const bodyParser = require("body-parser");
 const db = require("./connection.js");
+const bcrypt = require("bcrypt");
 
 const PORT = 4000;
 
@@ -79,6 +80,33 @@ function checkPhoneNumber(phoneNumber) {
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+// ADAUGA UN CONT //
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
+async function addAccount(email, username, password, phone_number, country) {
+  bcrypt.hash(password, 10, (err, hash) => {
+    if (err) throw err;
+    else {
+      db.query(
+        "INSERT INTO utilizatori (email, username, password, country, phone_number) VALUES (?,?,?,?,?)",
+        [email, username, hash, country, phone_number],
+        (err, res) => {
+          if (err) throw err;
+        }
+      );
+    }
+  });
+}
+
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+// ADAUGA UN CONT //
+//////////////////////////////////////////////
+//////////////////////////////////////////////
+
 app.post("/register", async (req, res) => {
   const email = req.body.email;
   const username = req.body.username;
@@ -86,24 +114,34 @@ app.post("/register", async (req, res) => {
   const phone_number = req.body.phone_number;
   const country = req.body.country;
 
-  if (email != "" && username != "" && password != "" && country != "" && phone_number != "") {
+  if (
+    email != "" &&
+    username != "" &&
+    password != "" &&
+    country != "" &&
+    phone_number != ""
+  ) {
     try {
       const emailExists = await checkEmail(email);
       const usernameExists = await checkUsername(username);
       const phoneNumberExists = await checkPhoneNumber(phone_number);
 
-      console.log(emailExists);
-      console.log(usernameExists);
-      console.log(phoneNumberExists);
+      // console.log(emailExists);
+      // console.log(usernameExists);
+      // console.log(phoneNumberExists);
       if (
         emailExists == false &&
         usernameExists == false &&
         phoneNumberExists == false
       ) {
-        res.send({ message: "gud" });
         //// CONTINUE REGISTER
+        addAccount(email, username, password, phone_number, country).then(
+          () => {
+            res.send({ message: "Utilizator inregistrat cu succes !" });
+          }
+        );
       } else {
-        res.send({ message: "bad" });
+        res.send({ message: "Datele introduse sunt existente deja !" });
         //// SHUT OFF
       }
     } catch (error) {
