@@ -4,6 +4,7 @@ const app = express();
 const bodyParser = require("body-parser");
 const db = require("./connection.js");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const PORT = 4000;
 
@@ -101,6 +102,52 @@ async function addAccount(email, username, password, phone_number, country) {
   });
 }
 
+function login(emailORusername, password) {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "SELECT * FROM utilizatori WHERE (email = ? OR username = ?)",
+      [emailORusername, emailORusername, password],
+      async (error, results) => {
+        if (error) {
+          reject(error);
+        } else {
+          if (results.length > 0) {
+            // resolve(true);
+            const hashedPassword = results[0].password;
+            const id = results[0].id;
+            try {
+              const match = await bcrypt.compare(password, hashedPassword);
+
+              if (match) {
+                const token = jwt.sign({ userId: id }, "012398u1jiodasdp';", {
+                  expiresIn: "1h",
+                });
+                if (token) {
+                  db.query(
+                    "UPDATE utilizatori SET token = ? WHERE (email = ? OR username = ?)",
+                    [token, emailORusername, emailORusername],
+                    (err, res) => {
+                      if (err) throw err;
+                    }
+                  );
+                  resolve(token);
+                }
+              } else {
+                // INCORRECT PASSWORD
+                resolve(false);
+              }
+            } catch (error) {
+              resolve(null);
+            }
+          } else {
+            resolve(false);
+          }
+        }
+      }
+    );
+  });
+}
+
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 // ADAUGA UN CONT //
@@ -108,11 +155,7 @@ async function addAccount(email, username, password, phone_number, country) {
 //////////////////////////////////////////////
 
 app.post("/register", async (req, res) => {
-  const email = req.body.email;
-  const username = req.body.username;
-  const password = req.body.password;
-  const phone_number = req.body.phone_number;
-  const country = req.body.country;
+  const { email, username, password, phone_number, country } = req.body;
 
   if (
     email != "" &&
@@ -141,9 +184,29 @@ app.post("/register", async (req, res) => {
           }
         );
       } else {
-        res.send({ message: "Datele introduse sunt existente deja !" });
+        res.send({ message: "Cont existent !" });
         //// SHUT OFF
       }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+});
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (email != "" && password != "") {
+    try {
+      // LOGIN
+      // trb vazut jsonwebtoken
+      login(email, password).then((token) => {
+        if (token) {
+          res.send({ token: `${token}` });
+        } else {
+          res.send({ message: "Eroare ! Datele introduse sunt incorecte !" });
+        }
+      });
     } catch (error) {
       console.error(error);
     }
