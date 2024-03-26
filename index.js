@@ -180,12 +180,24 @@ app.post("/register", async (req, res) => {
         //// CONTINUE REGISTER
         addAccount(email, username, password, phone_number, country).then(
           () => {
-            res.send({ message: "Utilizator inregistrat cu succes !" });
+            res.send({
+              message: "Utilizator inregistrat cu succes !",
+              success: true,
+            });
           }
         );
-      } else {
-        res.send({ message: "Cont existent !" });
-        //// SHUT OFF
+      } else if (emailExists) {
+        res.send({ message: "Email-ul este deja folosit  !", success: false });
+      } else if (usernameExists) {
+        res.send({
+          message: "Username-ul este deja folosit  !",
+          success: false,
+        });
+      } else if (phoneNumberExists) {
+        res.send({
+          message: "Numarul de telefon este deja folosit  !",
+          success: false,
+        });
       }
     } catch (error) {
       console.error(error);
