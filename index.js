@@ -6,12 +6,19 @@ const db = require("./connection.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const nodemailer = require("nodemailer");
+
 const PORT = 4000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Replace with your frontend URL
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+/////////
 app.get("/", (req, res) => {
   db.query("SELECT * FROM news", (err, result) => {
     if (err) {
@@ -74,7 +81,6 @@ function checkPhoneNumber(phoneNumber) {
     );
   });
 }
-
 //////////////////////////////////////////////
 //////////////////////////////////////////////
 // VERIFICA UN CONT POSIBIL INREGISTRAT //
@@ -211,17 +217,79 @@ app.post("/login", async (req, res) => {
   if (email != "" && password != "") {
     try {
       // LOGIN
-      // trb vazut jsonwebtoken
       login(email, password).then((token) => {
         if (token) {
-          res.send({ token: `${token}` });
+          res.send({ token: `${token}`, success: true });
         } else {
-          res.send({ message: "Eroare ! Datele introduse sunt incorecte !" });
+          res.send({
+            message: "Eroare ! Datele introduse sunt incorecte !",
+            success: false,
+          });
         }
       });
     } catch (error) {
       console.error(error);
     }
+  }
+});
+
+app.post("/getDisplay", (req, res) => {
+  const token = req.body.token;
+  try {
+    db.query(
+      "SELECT email FROM utilizatori where token = ?",
+      [token],
+      (err, result) => {
+        res.send(result[0]);
+      }
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+app.post("/logout", (req, res) => {
+  const token = req.body.token;
+  try {
+    db.query(
+      "UPDATE utilizatori SET token = DEFAULT  where token = ?",
+      [token],
+      (err, result) => {
+        res.send({ message: "Success !" });
+      }
+    );
+  } catch (error) {
+    throw error;
+  }
+});
+
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: "panaite.cristian99@gmail.com",
+    pass: "ywta qseb yvzn qrhl",
+  },
+});
+
+app.post("/send-mail", (req, res) => {
+  const { name, email, topic, text } = req.body;
+
+  const mailOptions = {
+    from: `${email}`,
+    to: "panaite.cristian99@gmail.com",
+    subject: `${name} - ${topic}`,
+    text: `${text}`,
+  };
+  if (name != "" && email != "" && topic != "" && text != "") {
+    transporter.sendMail(mailOptions, (err, result) => {
+      if (err) {
+        console.error("Eroare incercand sa trimit mail: ", err);
+        res.status(500).send("Eroare incercand sa trimit mail !");
+      } else {
+        console.log("Email trimis: ", result.response);
+        res.status(200).send("Email trimis cu succes !");
+      }
+    });
   }
 });
 
